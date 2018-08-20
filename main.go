@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	flagHyphen  = flag.String("hyphen", "-", "commit hash separator")
 	flagRev     = flag.String("rev", "HEAD", "git revision")
 	flagYear    = flag.String("year", "", "start year offset")
 	flagPrefix  = flag.String("prefix", "v", "prefix")
@@ -55,7 +56,6 @@ func run() error {
 		extra = "\n"
 	}
 
-
 	openOpt := &git.PlainOpenOptions{DetectDotGit: true}
 	repo, err := git.PlainOpenWithOptions(wd, openOpt)
 	if err != nil {
@@ -70,7 +70,11 @@ func run() error {
 		if n := len(vers) - 1; *flagShort && vers[n] == "0" {
 			vers = vers[:n]
 		}
-		fmt.Fprint(os.Stdout, *flagPrefix, strings.Join(vers, *flagSep), extra)
+		if len(vers) > 4 {
+			fmt.Fprint(os.Stdout, *flagPrefix, strings.Join(vers[:4], *flagSep), *flagHyphen, strings.Join(vers[4:], *flagHyphen), extra)
+		} else {
+			fmt.Fprint(os.Stdout, *flagPrefix, strings.Join(vers, *flagSep), extra)
+		}
 	} else {
 		var hash string
 		if hash, err = getInverse(repo); err != nil {
@@ -110,7 +114,7 @@ func getVersion(repo *git.Repository) ([]string, error) {
 
 	// empty repository
 	if commit == nil {
-		return []string{"0", "0", "0", "0"}, nil
+		return []string{"0", "0", "0", "0", ""}, nil
 	}
 
 	// determine year offset
@@ -137,6 +141,7 @@ func getVersion(repo *git.Repository) ([]string, error) {
 		strconv.Itoa(int(date.Month())),
 		strconv.Itoa(date.Day()),
 		strconv.Itoa(order),
+		commit.Hash.String()[:7],
 	}, nil
 }
 
